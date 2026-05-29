@@ -25,15 +25,19 @@
     .bg-Dark { background-color: #6d28d9; }
   </style>
 </head>
-<body class="bg-gray-900 text-gray-100 min-h-screen font-sans">
+<body class="bg-gray-900 text-gray-100 min-h-screen font-sans overflow-x-hidden">
 
   <header class="bg-gray-800 border-b border-gray-700 py-6 px-4 sticky top-0 z-50 shadow-md">
-    <div class="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
-      <h1 class="text-2xl font-black tracking-wider text-amber-400">🐉 DRAGON DEX</h1>
+    <div class="max-w-7xl mx-auto flex flex-col xl:flex-row items-start xl:items-center justify-between gap-4">
+      
+      <div>
+        <h1 class="text-2xl font-black tracking-wider text-amber-400">🐉 DRAGON DEX</h1>
+        <p class="text-xs text-gray-400 mt-1">Currently displaying Lvl 50, 0-Star parameters.</p>
+      </div>
       
       <!-- Filters & Sorting -->
-      <div class="flex flex-wrap gap-3 w-full md:w-auto">
-        <input type="text" id="searchBar" placeholder="Search dragon name or ability..." class="bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 flex-grow md:w-64">
+      <div class="flex flex-wrap gap-3 w-full xl:w-auto">
+        <input type="text" id="searchBar" placeholder="Search dragon..." class="bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 flex-grow md:w-48">
         
         <select id="rarityFilter" class="bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400">
           <option value="all">All Rarities</option>
@@ -63,11 +67,70 @@
           <option value="res">Highest Resistance</option>
           <option value="spd">Highest Speed</option>
         </select>
+
+        <!-- Future Expansion Placeholders -->
+        <div class="flex gap-2 border-l border-gray-600 pl-3 ml-1">
+            <select disabled class="bg-gray-800 border border-gray-700 text-gray-500 rounded-lg px-2 py-2 text-sm cursor-not-allowed" title="Future Feature: Level Select">
+                <option>Level: 50</option>
+            </select>
+            <select disabled class="bg-gray-800 border border-gray-700 text-gray-500 rounded-lg px-2 py-2 text-sm cursor-not-allowed" title="Future Feature: Star Rank">
+                <option>Stars: 0</option>
+            </select>
+        </div>
       </div>
     </div>
   </header>
 
   <main class="max-w-7xl mx-auto p-4 md:p-8">
+    
+    <!-- Individual Comparison Dashboard -->
+    <div id="compareSection" class="mb-8 hidden bg-gray-800/50 p-6 rounded-2xl border border-amber-500/30 shadow-lg shadow-amber-900/10">
+      <div class="flex justify-between items-center mb-6">
+        <h2 class="text-2xl font-black text-amber-400">⚖️ Individual Comparison</h2>
+        <button onclick="clearComparison()" class="bg-red-500/20 text-red-400 hover:bg-red-500/40 px-4 py-1.5 rounded-lg text-sm font-bold transition">Clear All</button>
+      </div>
+      <div id="compareGrid" class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <!-- Compared Dragons will inject here -->
+      </div>
+    </div>
+
+    <!-- Team Comparison Dashboard -->
+    <div id="teamCompareSection" class="mb-10 hidden bg-gray-800/80 p-6 rounded-2xl border border-gray-600 shadow-2xl">
+      <div class="flex justify-between items-center mb-6">
+        <h2 class="text-2xl font-black text-white">⚔️ Team Matchup</h2>
+        <button onclick="clearTeams()" class="bg-gray-700 text-gray-300 hover:bg-gray-600 px-4 py-1.5 rounded-lg text-sm font-bold transition">Reset Teams</button>
+      </div>
+      
+      <div class="flex flex-col lg:flex-row gap-8">
+        
+        <!-- Team A -->
+        <div class="flex-1 bg-blue-900/20 border border-blue-500/30 rounded-xl p-4">
+          <h3 class="text-lg font-black text-blue-400 mb-3 text-center uppercase tracking-wider">Team A</h3>
+          <div id="teamAList" class="flex flex-col gap-3 min-h-[120px]">
+            <!-- Team A Dragons injected here -->
+          </div>
+        </div>
+
+        <!-- Head to Head Stats -->
+        <div class="flex-shrink-0 w-full lg:w-64 flex flex-col justify-center">
+          <h3 class="text-sm font-bold text-gray-400 text-center uppercase tracking-wider mb-3">Total Stats</h3>
+          <div id="teamStatsGrid" class="bg-gray-900/80 rounded-xl p-4 border border-gray-700 grid grid-cols-3 gap-y-3 text-sm">
+            <!-- Stats injected here -->
+          </div>
+        </div>
+
+        <!-- Team B -->
+        <div class="flex-1 bg-red-900/20 border border-red-500/30 rounded-xl p-4">
+          <h3 class="text-lg font-black text-red-400 mb-3 text-center uppercase tracking-wider">Team B</h3>
+          <div id="teamBList" class="flex flex-col gap-3 min-h-[120px]">
+            <!-- Team B Dragons injected here -->
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Main Roster -->
     <div id="dragonGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
       <!-- Generated Cards go here -->
     </div>
@@ -83,6 +146,194 @@
       Legendary: "text-amber-400 border-amber-500"
     };
 
+    let compareSet = new Set();
+    let teamA = [];
+    let teamB = [];
+
+    function getDragonObj(name) {
+      return dragons.find(d => d.name === name);
+    }
+
+    // --- INDIVIDUAL COMPARISON LOGIC ---
+    function toggleCompare(dragonName) {
+      if (compareSet.has(dragonName)) {
+        compareSet.delete(dragonName);
+      } else {
+        if (compareSet.size >= 3) {
+          alert("You can only compare up to 3 individual dragons at a time! Remove one first.");
+          return;
+        }
+        compareSet.add(dragonName);
+      }
+      renderComparison();
+      renderDragons();
+    }
+
+    function clearComparison() {
+      compareSet.clear();
+      renderComparison();
+      renderDragons();
+    }
+
+    function renderComparison() {
+      const section = document.getElementById("compareSection");
+      const grid = document.getElementById("compareGrid");
+      
+      if (compareSet.size === 0) {
+        section.classList.add("hidden");
+        return;
+      }
+      
+      section.classList.remove("hidden");
+      grid.innerHTML = "";
+
+      const comparedDragons = dragons.filter(d => compareSet.has(d.name));
+      
+      // Calculate highest stats to highlight the winner
+      const maxStats = {
+        hp: Math.max(...comparedDragons.map(d => d.stats.hp)),
+        atk: Math.max(...comparedDragons.map(d => d.stats.atk)),
+        def: Math.max(...comparedDragons.map(d => d.stats.def)),
+        mag: Math.max(...comparedDragons.map(d => d.stats.mag)),
+        res: Math.max(...comparedDragons.map(d => d.stats.res)),
+        spd: Math.max(...comparedDragons.map(d => d.stats.spd))
+      };
+
+      comparedDragons.forEach(d => {
+        const card = document.createElement("div");
+        card.className = "bg-gray-800 border border-amber-500/50 rounded-xl p-5 shadow-lg relative";
+        
+        const tagsHtml = d.elements.map(el => `<span class="element-tag bg-${el}">${el}</span>`).join(" ");
+        
+        const statValueClass = (stat, val) => val === maxStats[stat] && comparedDragons.length > 1 
+          ? "font-black text-green-400 scale-110" 
+          : "font-bold text-gray-300";
+
+        card.innerHTML = `
+          <button onclick="toggleCompare('${d.name.replace(/'/g, "\\'")}')" class="absolute top-4 right-4 text-gray-400 hover:text-red-400 font-bold transition">✕</button>
+          <div class="flex flex-col h-full">
+            <h2 class="text-xl font-bold text-white mb-1">${d.name}</h2>
+            <div class="flex gap-1.5 mb-4">${tagsHtml}</div>
+            
+            <div class="bg-gray-900/80 rounded-lg p-3 grid grid-cols-2 gap-y-3 gap-x-2 text-sm border border-gray-700/50 mb-4 mt-auto">
+              <div class="flex justify-between px-2"><span class="text-gray-500 font-medium">HP</span><span class="${statValueClass('hp', d.stats.hp)}">${d.stats.hp}</span></div>
+              <div class="flex justify-between px-2"><span class="text-gray-500 font-medium">ATK</span><span class="${statValueClass('atk', d.stats.atk)}">${d.stats.atk}</span></div>
+              <div class="flex justify-between px-2"><span class="text-gray-500 font-medium">DEF</span><span class="${statValueClass('def', d.stats.def)}">${d.stats.def}</span></div>
+              <div class="flex justify-between px-2"><span class="text-gray-500 font-medium">MAG</span><span class="${statValueClass('mag', d.stats.mag)}">${d.stats.mag}</span></div>
+              <div class="flex justify-between px-2"><span class="text-gray-500 font-medium">RES</span><span class="${statValueClass('res', d.stats.res)}">${d.stats.res}</span></div>
+              <div class="flex justify-between px-2"><span class="text-gray-500 font-medium">SPD</span><span class="${statValueClass('spd', d.stats.spd)}">${d.stats.spd}</span></div>
+            </div>
+            <p class="text-amber-400 text-xs font-bold uppercase tracking-wider text-center mt-2 truncate" title="${d.ability}">${d.ability}</p>
+          </div>
+        `;
+        grid.appendChild(card);
+      });
+    }
+
+    // --- TEAM COMPARISON LOGIC ---
+    function toggleTeam(dragonName, teamId) {
+      const targetTeam = teamId === 'A' ? teamA : teamB;
+      
+      if (targetTeam.includes(dragonName)) {
+        targetTeam.splice(targetTeam.indexOf(dragonName), 1);
+      } else {
+        if (targetTeam.length >= 3) {
+          alert(`Team ${teamId} is already full (3/3)! Remove a dragon first.`);
+          return;
+        }
+        targetTeam.push(dragonName);
+      }
+      
+      renderTeamComparison();
+      renderDragons();
+    }
+
+    function clearTeams() {
+      teamA = [];
+      teamB = [];
+      renderTeamComparison();
+      renderDragons();
+    }
+
+    function calculateTeamStat(teamArray, statKey) {
+      return teamArray.reduce((total, name) => {
+        const d = getDragonObj(name);
+        return total + (d ? d.stats[statKey] : 0);
+      }, 0);
+    }
+
+    function renderTeamComparison() {
+      const section = document.getElementById("teamCompareSection");
+      const teamAList = document.getElementById("teamAList");
+      const teamBList = document.getElementById("teamBList");
+      const statsGrid = document.getElementById("teamStatsGrid");
+      
+      if (teamA.length === 0 && teamB.length === 0) {
+        section.classList.add("hidden");
+        return;
+      }
+      
+      section.classList.remove("hidden");
+
+      const renderMiniCard = (name, teamId) => {
+        const d = getDragonObj(name);
+        const tags = d.elements.map(el => `<span class="element-tag bg-${el} text-[10px] py-0 px-1.5">${el}</span>`).join(" ");
+        return `
+          <div class="flex items-center justify-between bg-gray-800 border border-gray-700 rounded-lg p-2.5 shadow-sm">
+            <div>
+              <p class="font-bold text-white text-sm leading-tight">${d.name}</p>
+              <div class="flex gap-1 mt-1">${tags}</div>
+            </div>
+            <button onclick="toggleTeam('${d.name.replace(/'/g, "\\'")}', '${teamId}')" class="text-gray-500 hover:text-red-400 p-1">✕</button>
+          </div>
+        `;
+      };
+
+      teamAList.innerHTML = teamA.length > 0 
+        ? teamA.map(name => renderMiniCard(name, 'A')).join("")
+        : `<p class="text-gray-500 text-sm text-center italic mt-4">Select dragons from the roster to build Team A.</p>`;
+
+      teamBList.innerHTML = teamB.length > 0 
+        ? teamB.map(name => renderMiniCard(name, 'B')).join("")
+        : `<p class="text-gray-500 text-sm text-center italic mt-4">Select dragons from the roster to build Team B.</p>`;
+
+      const statsToCompare = [
+        { label: "HP", key: "hp" },
+        { label: "ATK", key: "atk" },
+        { label: "DEF", key: "def" },
+        { label: "MAG", key: "mag" },
+        { label: "RES", key: "res" },
+        { label: "SPD", key: "spd" }
+      ];
+
+      statsGrid.innerHTML = "";
+      statsToCompare.forEach(s => {
+        const valA = calculateTeamStat(teamA, s.key);
+        const valB = calculateTeamStat(teamB, s.key);
+        
+        let colorA = "text-gray-400";
+        let colorB = "text-gray-400";
+        let fontA = "font-medium";
+        let fontB = "font-medium";
+
+        if (valA > valB && valA > 0) {
+          colorA = "text-blue-400"; fontA = "font-black scale-110";
+        } else if (valB > valA && valB > 0) {
+          colorB = "text-red-400"; fontB = "font-black scale-110";
+        } else if (valA === valB && valA > 0) {
+          colorA = "text-emerald-400"; colorB = "text-emerald-400";
+          fontA = "font-bold"; fontB = "font-bold";
+        }
+
+        statsGrid.innerHTML += `
+          <div class="text-right pr-2 ${colorA} ${fontA} transition-all">${valA || '-'}</div>
+          <div class="text-center font-bold text-gray-500 bg-gray-800 rounded text-[10px] flex items-center justify-center">${s.label}</div>
+          <div class="text-left pl-2 ${colorB} ${fontB} transition-all">${valB || '-'}</div>
+        `;
+      });
+    }
+
+    // --- MAIN ROSTER RENDER ---
     function renderDragons() {
       const grid = document.getElementById("dragonGrid");
       const searchTerm = document.getElementById("searchBar").value.toLowerCase();
@@ -97,7 +348,6 @@
         return;
       }
 
-      // 1. Filter the dataset
       let filtered = dragons.filter(d => {
         const matchesSearch = d.name.toLowerCase().includes(searchTerm) || d.ability.toLowerCase().includes(searchTerm);
         const matchesRarity = rarityTerm === "all" || d.rarity === rarityTerm;
@@ -105,19 +355,26 @@
         return matchesSearch && matchesRarity && matchesElement;
       });
 
-      // 2. Sort the dataset
       if (sortTerm !== "none") {
         filtered.sort((a, b) => b.stats[sortTerm] - a.stats[sortTerm]);
       }
 
-      // 3. Render the dataset
       filtered.forEach(d => {
         const card = document.createElement("div");
-        card.className = "bg-gray-800 border border-gray-700 rounded-xl p-5 shadow-lg flex flex-col justify-between hover:border-amber-500 transition";
+        const isCompared = compareSet.has(d.name);
+        const inTeamA = teamA.includes(d.name);
+        const inTeamB = teamB.includes(d.name);
+        
+        let borderStyle = 'border-gray-700 hover:border-gray-500';
+        // Priority styling for borders
+        if (inTeamA && inTeamB) borderStyle = 'border-purple-500 shadow-purple-900/20';
+        else if (inTeamA) borderStyle = 'border-blue-500 shadow-blue-900/20';
+        else if (inTeamB) borderStyle = 'border-red-500 shadow-red-900/20';
+        else if (isCompared) borderStyle = 'border-amber-400 shadow-amber-900/20';
+
+        card.className = `bg-gray-800 border ${borderStyle} rounded-xl p-5 shadow-lg flex flex-col justify-between transition-all`;
         
         const tagsHtml = d.elements.map(el => `<span class="element-tag bg-${el}">${el}</span>`).join(" ");
-        
-        // Highlight the sorted stat if one is selected
         const getStatClass = (stat) => sortTerm === stat ? "font-black text-amber-300 scale-110" : "font-bold text-gray-300";
         const getLabelClass = (stat) => sortTerm === stat ? "text-amber-400 font-bold" : "text-gray-500 font-medium";
 
@@ -129,19 +386,44 @@
             </div>
             <div class="flex gap-1.5 mb-4">${tagsHtml}</div>
             
-            <div class="bg-gray-900/50 rounded-lg p-3 grid grid-cols-3 gap-2 text-center text-xs border border-gray-700/50 mb-4 transition-all">
-              <div><p class="${getLabelClass('hp')}">HP</p><p class="${sortTerm === 'hp' ? getStatClass('hp') : 'font-bold text-emerald-400'}">${d.stats.hp}</p></div>
-              <div><p class="${getLabelClass('atk')}">ATK</p><p class="${sortTerm === 'atk' ? getStatClass('atk') : 'font-bold text-red-400'}">${d.stats.atk}</p></div>
-              <div><p class="${getLabelClass('def')}">DEF</p><p class="${sortTerm === 'def' ? getStatClass('def') : 'font-bold text-blue-400'}">${d.stats.def}</p></div>
-              <div><p class="${getLabelClass('mag')}">MAG</p><p class="${sortTerm === 'mag' ? getStatClass('mag') : 'font-bold text-fuchsia-400'}">${d.stats.mag}</p></div>
-              <div><p class="${getLabelClass('res')}">RES</p><p class="${sortTerm === 'res' ? getStatClass('res') : 'font-bold text-slate-300'}">${d.stats.res}</p></div>
-              <div><p class="${getLabelClass('spd')}">SPD</p><p class="${sortTerm === 'spd' ? getStatClass('spd') : 'font-bold text-cyan-400'}">${d.stats.spd}</p></div>
+            <div class="bg-gray-900/50 rounded-lg p-3 border border-gray-700/50 mb-4 transition-all">
+              <div class="text-[10px] uppercase tracking-widest text-gray-500 mb-2 text-center font-semibold">Lvl 50 • 0★ Base Stats</div>
+              <div class="grid grid-cols-3 gap-2 text-center text-xs">
+                <div><p class="${getLabelClass('hp')}">HP</p><p class="${sortTerm === 'hp' ? getStatClass('hp') : 'font-bold text-emerald-400'}">${d.stats.hp}</p></div>
+                <div><p class="${getLabelClass('atk')}">ATK</p><p class="${sortTerm === 'atk' ? getStatClass('atk') : 'font-bold text-red-400'}">${d.stats.atk}</p></div>
+                <div><p class="${getLabelClass('def')}">DEF</p><p class="${sortTerm === 'def' ? getStatClass('def') : 'font-bold text-blue-400'}">${d.stats.def}</p></div>
+                <div><p class="${getLabelClass('mag')}">MAG</p><p class="${sortTerm === 'mag' ? getStatClass('mag') : 'font-bold text-fuchsia-400'}">${d.stats.mag}</p></div>
+                <div><p class="${getLabelClass('res')}">RES</p><p class="${sortTerm === 'res' ? getStatClass('res') : 'font-bold text-slate-300'}">${d.stats.res}</p></div>
+                <div><p class="${getLabelClass('spd')}">SPD</p><p class="${sortTerm === 'spd' ? getStatClass('spd') : 'font-bold text-cyan-400'}">${d.stats.spd}</p></div>
+              </div>
             </div>
           </div>
           
-          <div class="border-t border-gray-700/60 pt-3 mt-auto">
-            <p class="text-amber-400 text-xs font-bold uppercase tracking-wider">Unique Ability: ${d.ability}</p>
-            <p class="text-gray-400 text-sm mt-0.5">${d.description}</p>
+          <div class="flex flex-col gap-3 mt-auto border-t border-gray-700/60 pt-3">
+            <div class="mb-2">
+              <p class="text-amber-400 text-xs font-bold uppercase tracking-wider">Unique Ability: ${d.ability}</p>
+              <p class="text-gray-400 text-sm mt-0.5 line-clamp-2" title="${d.description}">${d.description}</p>
+            </div>
+            
+            <div class="flex flex-col gap-2 mt-auto">
+              <!-- Individual Compare Button -->
+              <button onclick="toggleCompare('${d.name.replace(/'/g, "\\'")}')" 
+                class="w-full py-1.5 rounded text-xs font-bold transition-colors ${isCompared ? 'bg-amber-900/50 text-amber-400 border border-amber-500' : 'bg-gray-700 text-gray-300 hover:bg-amber-900/30 hover:text-amber-300 border border-transparent'}">
+                ${isCompared ? '✓ Comparing Individual' : '⚖️ Compare Individual'}
+              </button>
+              
+              <!-- Team Action Buttons -->
+              <div class="grid grid-cols-2 gap-2">
+                <button onclick="toggleTeam('${d.name.replace(/'/g, "\\'")}', 'A')" 
+                  class="w-full py-1.5 rounded text-xs font-bold transition-colors ${inTeamA ? 'bg-blue-900/50 text-blue-400 border border-blue-500' : 'bg-gray-700 text-gray-300 hover:bg-blue-900/30 hover:text-blue-300 border border-transparent'}">
+                  ${inTeamA ? '✓ Team A' : '+ Team A'}
+                </button>
+                <button onclick="toggleTeam('${d.name.replace(/'/g, "\\'")}', 'B')" 
+                  class="w-full py-1.5 rounded text-xs font-bold transition-colors ${inTeamB ? 'bg-red-900/50 text-red-400 border border-red-500' : 'bg-gray-700 text-gray-300 hover:bg-red-900/30 hover:text-red-300 border border-transparent'}">
+                  ${inTeamB ? '✓ Team B' : '+ Team B'}
+                </button>
+              </div>
+            </div>
           </div>
         `;
         grid.appendChild(card);
